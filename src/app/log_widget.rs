@@ -29,7 +29,7 @@ impl JjLogWidget {
   }
 
   async fn update_runner(self, config: Config) {
-    let mut interval = interval(Duration::from_secs(2));
+    let mut interval = interval(config.log_command_duration());
     loop {
       interval.tick().await;
       self.clone().update(config.clone()).await;
@@ -98,9 +98,9 @@ impl Widget for &JjLogWidget {
         .expect("failed to cast line count to u16");
       let ba_area = Rect::new(
         area.x,
-        area.y + area.height - line_count,
+        area.y + area.height - line_count.min(area.height),
         area.width,
-        line_count,
+        line_count.min(area.height),
       );
 
       content.render(ba_area, buf);
