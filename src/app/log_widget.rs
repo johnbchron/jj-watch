@@ -3,7 +3,7 @@ use std::sync::{Arc, RwLock};
 use ansi_to_tui::IntoText;
 use miette::{Context, IntoDiagnostic, Result};
 use ratatui::{layout::Rect, prelude::*};
-use tokio::time::{Duration, interval};
+use tokio::time::interval;
 
 use crate::config::Config;
 

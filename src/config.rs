@@ -1,6 +1,6 @@
 use std::{
   ops::Deref,
-  sync::{Arc, Mutex, RwLock},
+  sync::{Arc, RwLock},
   time::Duration,
 };
 
@@ -20,7 +20,7 @@ struct ConfigInner {
 }
 
 impl Config {
-  pub fn from_args_and_env(args: &Args) -> Result<Self> {
+  pub fn from_args_and_env(_args: &Args) -> Result<Self> {
     Ok(Config {
       inner: Arc::new(RwLock::new(ConfigInner {
         log_command_period: Duration::from_secs(2),
