@@ -53,7 +53,11 @@ impl App {
   }
 
   fn render(&self, frame: &mut Frame) {
-    let layout = Layout::vertical([Constraint::Fill(1), Constraint::Length(1)]);
+    let layout = Layout::vertical([
+      Constraint::Fill(1),
+      Constraint::Length(1),
+      Constraint::Length(1),
+    ]);
     let (splits, _) = layout.split_with_spacers(frame.area());
     let title = Line::from("jj watch")
       .centered()
@@ -61,7 +65,7 @@ impl App {
       .bg(Color::Black)
       .fg(Color::Red);
     frame.render_widget(&self.log_widget, splits[0]);
-    frame.render_widget(title, splits[1]);
+    frame.render_widget(title, splits[2]);
   }
 
   fn handle_event(&mut self, event: &Event) {

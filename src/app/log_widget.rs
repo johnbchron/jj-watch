@@ -96,11 +96,13 @@ impl Widget for &JjLogWidget {
         .len()
         .try_into()
         .expect("failed to cast line count to u16");
+      let line_count = line_count.min(area.height);
+
       let ba_area = Rect::new(
         area.x,
-        area.y + area.height - line_count.min(area.height),
+        area.y + area.height - line_count,
         area.width,
-        line_count.min(area.height),
+        line_count,
       );
 
       content.render(ba_area, buf);
