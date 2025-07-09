@@ -13,7 +13,10 @@
         overlays = [ (import rust-overlay) devshell.overlays.default ];
       };
 
-      toolchain = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+      toolchain = p: p.rust-bin.selectLatestNightlyWith (toolchain: toolchain.minimal.override {
+        extensions = [ "rustfmt" "clippy" ];
+      });
+      dev-toolchain = p: p.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
         extensions = [ "rust-src" "rust-analyzer" ];
       });
 
@@ -30,7 +33,7 @@
       });
     in {
       devShell = pkgs.devshell.mkShell {
-        packages = [ toolchain pkgs.gcc pkgs.lldb ];
+        packages = [ (dev-toolchain pkgs) ];
         motd = "\n  Welcome to the {2}jj-watch{reset} shell.\n";
       };
       packages = {
