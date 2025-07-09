@@ -54,15 +54,13 @@ impl App {
   }
 
   fn render(&self, frame: &mut Frame) {
-    let page_splits = Layout::vertical([
-      Constraint::Fill(1),
-      Constraint::Length(1),
-      Constraint::Length(1),
-    ])
-    .split(frame.area());
-    frame.render_widget(&self.log_widget, page_splits[0]);
+    let page_splits =
+      Layout::vertical([Constraint::Fill(1), Constraint::Length(1)])
+        .spacing(1)
+        .split(frame.area());
 
-    frame.render_widget(StatusLineWidget, page_splits[2]);
+    frame.render_widget(&self.log_widget, page_splits[0]);
+    frame.render_widget(StatusLineWidget, page_splits[1]);
   }
 
   fn handle_event(&mut self, event: &Event) {
