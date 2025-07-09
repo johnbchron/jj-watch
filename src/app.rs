@@ -11,7 +11,7 @@ use ratatui::{
 };
 use tokio_stream::StreamExt;
 
-use self::log_widget::JjLogWidget;
+use self::{log_widget::JjLogWidget, status_line_widget::StatusLineWidget};
 use crate::config::Config;
 
 pub struct App {
@@ -53,19 +53,15 @@ impl App {
   }
 
   fn render(&self, frame: &mut Frame) {
-    let layout = Layout::vertical([
+    let page_splits = Layout::vertical([
       Constraint::Fill(1),
       Constraint::Length(1),
       Constraint::Length(1),
-    ]);
-    let (splits, _) = layout.split_with_spacers(frame.area());
-    let title = Line::from("jj watch")
-      .centered()
-      .bold()
-      .bg(Color::Black)
-      .fg(Color::Red);
-    frame.render_widget(&self.log_widget, splits[0]);
-    frame.render_widget(title, splits[2]);
+    ])
+    .split(frame.area());
+    frame.render_widget(&self.log_widget, page_splits[0]);
+
+    frame.render_widget(StatusLineWidget, page_splits[2]);
   }
 
   fn handle_event(&mut self, event: &Event) {
@@ -74,6 +70,41 @@ impl App {
         KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
         _ => {}
       }
+    }
+  }
+}
+
+mod status_line_widget {
+  use ratatui::{
+    layout::{Constraint, Layout},
+    prelude::*,
+    widgets::{Block, Padding},
+  };
+
+  pub struct StatusLineWidget;
+
+  impl Widget for StatusLineWidget {
+    fn render(self, area: Rect, buf: &mut Buffer)
+    where
+      Self: Sized,
+    {
+      let block = Block::new()
+        .bg(Color::Black)
+        .padding(Padding::horizontal(1));
+      (&block).render(area, buf);
+
+      let quit_message = Span::from("`q` or `<esc>` to quit");
+      let title = Line::from("jj-watch").bold().centered().fg(Color::Red);
+
+      let status_line_splits = Layout::horizontal([
+        Constraint::Length(quit_message.content.len() as _),
+        Constraint::Fill(1),
+        Constraint::Length(quit_message.content.len() as _),
+      ])
+      .split(block.inner(area));
+
+      quit_message.render(status_line_splits[0], buf);
+      title.render(status_line_splits[1], buf);
     }
   }
 }
