@@ -17,13 +17,15 @@ pub struct Config {
 #[derive(Debug)]
 struct ConfigInner {
   log_command_period: Duration,
+  no_snapshot:        bool,
 }
 
 impl Config {
-  pub fn from_args_and_env(_args: &Args) -> Result<Self> {
+  pub fn from_args_and_env(args: &Args) -> Result<Self> {
     Ok(Config {
       inner: Arc::new(RwLock::new(ConfigInner {
         log_command_period: Duration::from_secs(2),
+        no_snapshot:        args.no_snapshot,
       })),
     })
   }
@@ -37,14 +39,18 @@ impl Config {
 
   pub fn command(&self) -> Command {
     let mut command = Command::new("jj");
-    command.args([
-      "log",
-      "--ignore-working-copy",
-      "--color",
-      "always",
-      "--no-pager",
-      "--quiet",
-    ]);
+
+    let config = self.read();
+
+    let mut args = vec!["log"];
+    if config.no_snapshot {
+      args.push("--ignore-working-copy");
+    }
+    args.extend(["--color", "always"]);
+    args.push("--no-pager");
+    args.push("--quiet");
+
+    command.args(args);
 
     command
   }
