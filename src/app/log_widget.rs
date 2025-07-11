@@ -11,6 +11,7 @@ use crate::config::Config;
 pub struct JjLogWidget {
   state:        Arc<RwLock<JjLogState>>,
   bottom_align: bool,
+  left_margin:  u16,
 }
 
 impl Default for JjLogWidget {
@@ -18,6 +19,7 @@ impl Default for JjLogWidget {
     JjLogWidget {
       state:        Default::default(),
       bottom_align: true,
+      left_margin:  1,
     }
   }
 }
@@ -75,7 +77,7 @@ impl JjLogWidget {
 }
 
 impl Widget for &JjLogWidget {
-  fn render(self, area: Rect, buf: &mut Buffer)
+  fn render(self, mut area: Rect, buf: &mut Buffer)
   where
     Self: Sized,
   {
@@ -98,17 +100,22 @@ impl Widget for &JjLogWidget {
         .expect("failed to cast line count to u16");
       let line_count = line_count.min(area.height);
 
-      let ba_area = Rect::new(
-        area.x,
-        area.y + area.height - line_count,
-        area.width,
-        line_count,
-      );
+      // let ba_area = Rect::new(
+      //   area.x,
+      //   area.y + area.height - line_count,
+      //   area.width,
+      //   line_count,
+      // );
 
-      content.render(ba_area, buf);
-    } else {
-      content.render(area, buf);
+      area.y = area.y + area.height - line_count;
+      area.height = line_count;
     }
+
+    let left_margin = self.left_margin.min(area.width);
+    area.x += left_margin;
+    area.width -= left_margin;
+
+    content.render(area, buf);
   }
 }
 
