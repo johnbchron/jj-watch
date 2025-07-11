@@ -24,7 +24,7 @@ impl Config {
   pub fn from_args_and_env(args: &Args) -> Result<Self> {
     Ok(Config {
       inner: Arc::new(RwLock::new(ConfigInner {
-        log_command_period: Duration::from_secs(2),
+        log_command_period: Duration::from_secs(1),
         no_snapshot:        args.no_snapshot,
       })),
     })
