@@ -33,7 +33,7 @@
       });
     in {
       devShell = pkgs.devshell.mkShell {
-        packages = [ (dev-toolchain pkgs) ];
+        packages = [ (dev-toolchain pkgs) pkgs.gcc ];
         motd = "\n  Welcome to the {2}jj-watch{reset} shell.\n";
       };
       packages = {
