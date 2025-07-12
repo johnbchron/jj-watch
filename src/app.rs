@@ -56,7 +56,6 @@ impl App {
   fn render(&self, frame: &mut Frame) {
     let page_splits =
       Layout::vertical([Constraint::Fill(1), Constraint::Length(1)])
-        .spacing(1)
         .split(frame.area());
 
     frame.render_widget(&self.log_widget, page_splits[0]);

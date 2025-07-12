@@ -13,17 +13,17 @@ use crate::config::Config;
 
 #[derive(Clone)]
 pub struct JjLogWidget {
-  left_margin:  u16,
   state:         Arc<RwLock<JjLogState>>,
   reverse_lines: bool,
+  padding:       Padding,
 }
 
 impl Default for JjLogWidget {
   fn default() -> Self {
     JjLogWidget {
-      left_margin:  1,
       state:         Default::default(),
       reverse_lines: true,
+      padding:       Padding::uniform(1),
     }
   }
 }
@@ -96,6 +96,9 @@ impl Widget for &JjLogWidget {
       None => Text::from(Span::raw("No data yet")),
     };
 
+    let block = Block::new().padding(self.padding);
+    area = block.inner(area);
+
     if self.reverse_lines {
       let line_count: u16 = content
         .lines
@@ -107,10 +110,6 @@ impl Widget for &JjLogWidget {
       area.y = area.y + area.height - line_count;
       area.height = line_count;
     }
-
-    let left_margin = self.left_margin.min(area.width);
-    area.x += left_margin;
-    area.width -= left_margin;
 
     content.render(area, buf);
   }
