@@ -2,24 +2,28 @@ use std::sync::{Arc, RwLock};
 
 use ansi_to_tui::IntoText;
 use miette::{Context, IntoDiagnostic, Result};
-use ratatui::{layout::Rect, prelude::*};
+use ratatui::{
+  layout::Rect,
+  prelude::*,
+  widgets::{Block, Padding},
+};
 use tokio::time::interval;
 
 use crate::config::Config;
 
 #[derive(Clone)]
 pub struct JjLogWidget {
-  state:        Arc<RwLock<JjLogState>>,
-  bottom_align: bool,
   left_margin:  u16,
+  state:         Arc<RwLock<JjLogState>>,
+  reverse_lines: bool,
 }
 
 impl Default for JjLogWidget {
   fn default() -> Self {
     JjLogWidget {
-      state:        Default::default(),
-      bottom_align: true,
       left_margin:  1,
+      state:         Default::default(),
+      reverse_lines: true,
     }
   }
 }
@@ -92,20 +96,13 @@ impl Widget for &JjLogWidget {
       None => Text::from(Span::raw("No data yet")),
     };
 
-    if self.bottom_align {
+    if self.reverse_lines {
       let line_count: u16 = content
         .lines
         .len()
         .try_into()
         .expect("failed to cast line count to u16");
       let line_count = line_count.min(area.height);
-
-      // let ba_area = Rect::new(
-      //   area.x,
-      //   area.y + area.height - line_count,
-      //   area.width,
-      //   line_count,
-      // );
 
       area.y = area.y + area.height - line_count;
       area.height = line_count;
