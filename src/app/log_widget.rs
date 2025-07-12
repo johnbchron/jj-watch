@@ -1,7 +1,10 @@
-use std::sync::{Arc, RwLock};
+use std::{
+  process::ExitStatus,
+  sync::{Arc, RwLock},
+};
 
 use ansi_to_tui::IntoText;
-use miette::{Context, IntoDiagnostic, Result};
+use miette::{Context, IntoDiagnostic};
 use ratatui::{
   layout::Rect,
   prelude::*,
@@ -51,23 +54,16 @@ impl JjLogWidget {
       .context("failed to run `jj log` command")
       .unwrap();
 
-    let output_string = output
-      .stdout
-      .utf8_chunks()
-      .map(|c| c.valid())
-      .filter(|c| !c.is_empty())
-      .collect::<Vec<_>>()
-      .join("");
-
-    let output_text = output_string
-      .into_text()
-      .into_diagnostic()
-      .context("failed to parse ANSI from `jj log` stdout")
-      .unwrap();
+    let stdout = text_from_ansi_bytes(&output.stdout);
+    let stderr = text_from_ansi_bytes(&output.stderr);
 
     let result = match output.status.success() {
-      true => Ok(output_text),
-      false => Err(output_text),
+      true => JjLogState::Success { stdout },
+      false => JjLogState::Failure {
+        stdout,
+        stderr,
+        exit_status: output.status,
+      },
     };
 
     {
@@ -75,7 +71,7 @@ impl JjLogWidget {
         .state
         .write()
         .expect("failed to lock `JjLogWidget` state");
-      *lock = JjLogState(Some(result));
+      *lock = result;
     }
   }
 }
@@ -85,15 +81,14 @@ impl Widget for &JjLogWidget {
   where
     Self: Sized,
   {
-    let content = match self
+    let content = match &(*self
       .state
       .read()
-      .expect("failed to lock `JjLogWidget` state")
-      .0
+      .expect("failed to lock `JjLogWidget` state"))
     {
-      Some(Ok(ref data)) => data.clone(),
-      Some(Err(ref data)) => data.clone(),
-      None => Text::from(Span::raw("No data yet")),
+      JjLogState::Success { stdout } => stdout.clone(),
+      JjLogState::Failure { stderr, .. } => stderr.clone(),
+      JjLogState::Unpopulated => Text::from(Span::raw("No data yet")),
     };
 
     let block = Block::new().padding(self.padding);
@@ -116,4 +111,32 @@ impl Widget for &JjLogWidget {
 }
 
 #[derive(Default)]
-struct JjLogState(Option<Result<Text<'static>, Text<'static>>>);
+enum JjLogState {
+  Success {
+    stdout: Text<'static>,
+  },
+  Failure {
+    stdout:      Text<'static>,
+    stderr:      Text<'static>,
+    exit_status: ExitStatus,
+  },
+  #[default]
+  Unpopulated,
+}
+
+fn text_from_ansi_bytes(data: &[u8]) -> Text<'static> {
+  let string = data
+    .utf8_chunks()
+    .map(|c| c.valid())
+    .filter(|c| !c.is_empty())
+    .collect::<Vec<_>>()
+    .join("");
+
+  let text = string
+    .into_text()
+    .into_diagnostic()
+    .context("failed to parse ANSI from `jj log` stdout")
+    .unwrap();
+
+  text
+}
