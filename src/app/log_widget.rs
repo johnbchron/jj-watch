@@ -82,9 +82,9 @@ impl JjLogWidget {
     let result = match output.status.success() {
       true => JjLogState::Success { stdout },
       false => JjLogState::Failure {
-        stdout,
+        _stdout: stdout,
         stderr,
-        exit_status: output.status,
+        _exit_status: output.status,
       },
     };
 
@@ -165,9 +165,9 @@ enum JjLogState {
     stdout: Text<'static>,
   },
   Failure {
-    stdout:      Text<'static>,
-    stderr:      Text<'static>,
-    exit_status: ExitStatus,
+    _stdout:      Text<'static>,
+    stderr:       Text<'static>,
+    _exit_status: ExitStatus,
   },
   #[default]
   Unpopulated,
@@ -181,11 +181,9 @@ fn text_from_ansi_bytes(data: &[u8]) -> Text<'static> {
     .collect::<Vec<_>>()
     .join("");
 
-  let text = string
+  string
     .into_text()
     .into_diagnostic()
     .context("failed to parse ANSI from `jj log` stdout")
-    .unwrap();
-
-  text
+    .unwrap()
 }
