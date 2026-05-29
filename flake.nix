@@ -6,50 +6,44 @@
     devshell.url = "github:numtide/devshell";
   };
 
-  outputs = { nixpkgs, rust-overlay, devshell, flake-utils, crane, ... }: 
-    flake-utils.lib.eachDefaultSystem (system: let
+  outputs = { nixpkgs, rust-overlay, devshell, flake-utils, crane, ... }: let
+    # define jj-watch in an overlay
+    overlay = prev: final: let
+      prev' = prev.extend (import rust-overlay);
+    in {
+      jj-watch = prev'.callPackage ./package.nix { inherit crane; };
+    };
+
+    per-system = flake-utils.lib.eachDefaultSystem (system: let
+      # jj-watch on the given system, through the overlay
+      jj-watch = (import nixpkgs { inherit system; overlays = [ overlay ]; }).jj-watch;
+
+      # pkgs for devshell
       pkgs = import nixpkgs {
         inherit system;
         overlays = [ (import rust-overlay) devshell.overlays.default ];
       };
-
-      toolchain = p: p.rust-bin.selectLatestNightlyWith (toolchain: toolchain.minimal.override {
-        extensions = [ "rustfmt" "clippy" ];
-      });
-      dev-toolchain = p: p.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
+      dev-toolchain = pkgs.rust-bin.selectLatestNightlyWith (toolchain: toolchain.default.override {
         extensions = [ "rust-src" "rust-analyzer" ];
       });
-
-      craneLib = (crane.mkLib pkgs).overrideToolchain toolchain;
-      commonArgs = {
-        src = craneLib.cleanCargoSource ./.;
-        strictDeps = true;
-      };
-      jj-watch = craneLib.buildPackage (commonArgs // {
-        cargoArtifacts = craneLib.buildDepsOnly commonArgs;
-        postInstall = ''
-          ln -T $out/bin/jj-watch $out/bin/jjw
-        '';
-      });
-
-      packages = [
-        (dev-toolchain pkgs)
+      nativeBuildInputs = [
+        dev-toolchain
         pkgs.gcc
       ] ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
         pkgs.libiconv
       ]);
     in {
       devShell = pkgs.mkShell {
-        # inherit packages;
-        nativeBuildInputs = packages;
-        # motd = "\n  Welcome to the {2}jj-watch{reset} shell.\n";
-        # env = [
-        #   { name = "LD_LIBRARY_PATH"; value = pkgs.lib.makeLibraryPath packages; }
-        # ];
+        inherit nativeBuildInputs;
       };
       packages = {
         inherit jj-watch;
         default = jj-watch;
       };
     });
+  in {
+    overlays = {
+      default = overlay;
+    };
+  } // per-system;
 }
