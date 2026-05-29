@@ -31,10 +31,21 @@
           ln -T $out/bin/jj-watch $out/bin/jjw
         '';
       });
+
+      packages = [
+        (dev-toolchain pkgs)
+        pkgs.gcc
+      ] ++ (pkgs.lib.optionals pkgs.stdenv.isDarwin [
+        pkgs.libiconv
+      ]);
     in {
-      devShell = pkgs.devshell.mkShell {
-        packages = [ (dev-toolchain pkgs) pkgs.gcc ];
-        motd = "\n  Welcome to the {2}jj-watch{reset} shell.\n";
+      devShell = pkgs.mkShell {
+        # inherit packages;
+        nativeBuildInputs = packages;
+        # motd = "\n  Welcome to the {2}jj-watch{reset} shell.\n";
+        # env = [
+        #   { name = "LD_LIBRARY_PATH"; value = pkgs.lib.makeLibraryPath packages; }
+        # ];
       };
       packages = {
         inherit jj-watch;
