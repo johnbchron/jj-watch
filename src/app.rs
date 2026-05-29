@@ -3,7 +3,7 @@ mod status_line_widget;
 
 use std::time::Duration;
 
-use crossterm::event::{Event, EventStream, KeyCode};
+use crossterm::event::{Event, EventStream, KeyCode, MouseEventKind};
 use miette::{Context, IntoDiagnostic, Result};
 use ratatui::{
   DefaultTerminal,
@@ -66,6 +66,13 @@ impl App {
     if let Some(key) = event.as_key_press_event() {
       match key.code {
         KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
+        _ => {}
+      }
+    }
+    if let Event::Mouse(mouse) = event {
+      match mouse.kind {
+        MouseEventKind::ScrollUp => self.log_widget.scroll_up(3),
+        MouseEventKind::ScrollDown => self.log_widget.scroll_down(3),
         _ => {}
       }
     }

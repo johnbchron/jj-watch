@@ -1,6 +1,9 @@
 use std::{
   process::ExitStatus,
-  sync::{Arc, RwLock},
+  sync::{
+    Arc, RwLock,
+    atomic::{AtomicU16, Ordering},
+  },
 };
 
 use ansi_to_tui::IntoText;
@@ -8,7 +11,9 @@ use miette::{Context, IntoDiagnostic};
 use ratatui::{
   layout::Rect,
   prelude::*,
-  widgets::{Block, Padding},
+  widgets::{
+    Block, Padding, Paragraph, Scrollbar, ScrollbarOrientation, ScrollbarState,
+  },
 };
 use tokio::time::interval;
 
@@ -19,6 +24,7 @@ pub struct JjLogWidget {
   state:         Arc<RwLock<JjLogState>>,
   reverse_lines: bool,
   padding:       Padding,
+  scroll_offset: Arc<AtomicU16>,
 }
 
 impl Default for JjLogWidget {
@@ -27,7 +33,23 @@ impl Default for JjLogWidget {
       state:         Default::default(),
       reverse_lines: true,
       padding:       Padding::uniform(1),
+      scroll_offset: Arc::new(AtomicU16::new(0)),
     }
+  }
+}
+
+impl JjLogWidget {
+  pub(super) fn scroll_up(&self, lines: u16) {
+    let current = self.scroll_offset.load(Ordering::Relaxed);
+    self
+      .scroll_offset
+      .store(current.saturating_sub(lines), Ordering::Relaxed);
+  }
+
+  pub(super) fn scroll_down(&self, lines: u16) {
+    self
+      .scroll_offset
+      .fetch_add(lines, Ordering::Relaxed);
   }
 }
 
@@ -77,7 +99,7 @@ impl JjLogWidget {
 }
 
 impl Widget for &JjLogWidget {
-  fn render(self, mut area: Rect, buf: &mut Buffer)
+  fn render(self, area: Rect, buf: &mut Buffer)
   where
     Self: Sized,
   {
@@ -92,21 +114,48 @@ impl Widget for &JjLogWidget {
     };
 
     let block = Block::new().padding(self.padding);
-    area = block.inner(area);
+    let inner = block.inner(area);
 
-    if self.reverse_lines {
-      let line_count: u16 = content
-        .lines
-        .len()
-        .try_into()
-        .expect("failed to cast line count to u16");
-      let line_count = line_count.min(area.height);
+    let line_count: u16 = content
+      .lines
+      .len()
+      .try_into()
+      .unwrap_or(u16::MAX);
 
-      area.y = area.y + area.height - line_count;
-      area.height = line_count;
+    let scrollbar_area = inner;
+    let mut content_area = inner;
+    content_area.width = content_area.width.saturating_sub(1);
+
+    let max_scroll = line_count.saturating_sub(content_area.height);
+    let scroll_offset = self
+      .scroll_offset
+      .load(Ordering::Relaxed)
+      .min(max_scroll);
+    self
+      .scroll_offset
+      .store(scroll_offset, Ordering::Relaxed);
+
+    if self.reverse_lines && line_count < content_area.height {
+      let shift = content_area.height - line_count;
+      content_area.y += shift;
+      content_area.height = line_count;
     }
 
-    content.render(area, buf);
+    Paragraph::new(content)
+      .scroll((scroll_offset, 0))
+      .render(content_area, buf);
+
+    if max_scroll > 0 {
+      let mut scrollbar_state =
+        ScrollbarState::new((max_scroll + 1) as usize)
+          .position(scroll_offset as usize)
+          .viewport_content_length(content_area.height as usize);
+      Scrollbar::new(ScrollbarOrientation::VerticalRight).render(
+        scrollbar_area,
+        buf,
+        &mut scrollbar_state,
+      );
+    }
   }
 }
 
