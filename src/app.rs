@@ -3,7 +3,9 @@ mod status_line_widget;
 
 use std::time::Duration;
 
-use crossterm::event::{Event, EventStream, KeyCode, MouseEventKind};
+use crossterm::event::{
+  Event, EventStream, KeyCode, KeyModifiers, MouseEventKind,
+};
 use miette::{Context, IntoDiagnostic, Result};
 use ratatui::{
   DefaultTerminal,
@@ -66,6 +68,9 @@ impl App {
     if let Some(key) = event.as_key_press_event() {
       match key.code {
         KeyCode::Char('q') | KeyCode::Esc => self.should_quit = true,
+        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+          self.should_quit = true
+        }
         _ => {}
       }
     }
